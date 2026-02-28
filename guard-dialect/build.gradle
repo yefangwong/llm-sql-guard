@@ -1,0 +1,3 @@
+dependencies {
+    // Basic dialect interface needs no external deps
+}

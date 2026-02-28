@@ -1,0 +1,29 @@
+{
+  "name": "SALES_PROD",
+  "schemas": {
+    "PUBLIC": {
+      "name": "PUBLIC",
+      "tables": {
+        "users": {
+          "name": "users",
+          "columns": {
+            "id": { "name": "id", "type": "INTEGER" },
+            "name": { "name": "name", "type": "VARCHAR" }
+          },
+          "relations": []
+        },
+        "orders": {
+          "name": "orders",
+          "columns": {
+            "id": { "name": "id", "type": "INTEGER" },
+            "user_id": { "name": "user_id", "type": "INTEGER" },
+            "total": { "name": "total", "type": "DECIMAL" }
+          },
+          "relations": [
+            { "sourceColumn": "user_id", "targetTable": "users", "targetColumn": "id" }
+          ]
+        }
+      }
+    }
+  }
+}

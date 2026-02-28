@@ -1,0 +1,51 @@
+@startuml
+!theme toy
+skinparam sequenceMessageAlign center
+
+actor "User / Application" as User
+participant "guard-cli" as CLI
+participant "guard-core (Validator)" as Core
+participant "guard-dialect" as Dialect
+participant "guard-ai-client" as AI
+participant "guard-executor" as Executor
+database "Target DB" as DB
+
+User -> CLI: Input SQL Query
+activate CLI
+
+CLI -> Core: validate(sql)
+activate Core
+
+Core -> Dialect: getContext(sql)
+activate Dialect
+Dialect --> Core: schema / keywords
+deactivate Dialect
+
+Core -> Core: semantic_check()
+note right
+    檢查 Alias, Schema,
+    及唯讀權限
+end note
+
+alt #LightGreen Validation Success
+    Core --> CLI: ValidationResult(OK)
+    CLI -> Executor: execute(sql)
+    activate Executor
+    Executor -> DB: query (Read-Only)
+    DB --> Executor: ResultSet
+    Executor --> CLI: DataTable
+    deactivate Executor
+    CLI -> User: Render Table (ANSI)
+else #Pink Validation Failed
+    Core --> CLI: ValidationResult(FAIL, ErrorCode)
+    CLI -> AI: explain(error_context)
+    activate AI
+    AI --> CLI: Semantic Explanation
+    deactivate AI
+    CLI -> User: Display Error + AI Suggestion
+end
+
+deactivate Core
+deactivate CLI
+
+@enduml

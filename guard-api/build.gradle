@@ -1,0 +1,4 @@
+dependencies {
+    // API 模組應保持最小依賴，方便第三方開發插件
+    implementation project(':guard-dialect')
+}

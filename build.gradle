@@ -1,0 +1,65 @@
+plugins {
+    id 'java'
+}
+
+allprojects {
+    group = 'io.yefangwong'
+    version = '1.0.0-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+// PlantUML 轉換工具配置
+configurations {
+    plantuml
+}
+
+dependencies {
+    plantuml 'net.sourceforge.plantuml:plantuml:1.2023.12'
+}
+
+task generateDiagram(type: JavaExec) {
+    group = 'documentation'
+    description = 'Generates PNG diagrams from all .puml files in docs/ folder.'
+    classpath = configurations.plantuml
+    mainClass = 'net.sourceforge.plantuml.Run'
+    
+    // 參數解釋: -tpng (產出 png), -o images (存放到同層的 images 資料夾)
+    args = ['-tpng', 'docs/*.puml', '-o', 'images']
+    
+    inputs.dir 'docs'
+    outputs.dir 'docs/images'
+}
+
+// 穩定版：快速開啟架構文件與圖表 (macOS 標準工作流)
+task viewDocs(type: Exec) {
+    group = 'documentation'
+    description = 'Opens the architecture documentation.'
+    commandLine 'open', 'docs/README.md'
+}
+
+task viewDiagrams(type: Exec) {
+    group = 'documentation'
+    description = 'Opens the diagrams folder.'
+    commandLine 'open', 'docs/images/'
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'java-library'
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+    }
+
+    dependencies {
+        testImplementation 'junit:junit:4.13.2'
+    }
+}

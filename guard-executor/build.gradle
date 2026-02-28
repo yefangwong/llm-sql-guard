@@ -1,0 +1,8 @@
+dependencies {
+    implementation project(':guard-api')
+    implementation project(':guard-core')
+    implementation project(':guard-ui')
+    
+    // SQLite JDBC driver (bundled for convenience in this version)
+    implementation 'org.xerial:sqlite-jdbc:3.42.0.0'
+}

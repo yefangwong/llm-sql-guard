@@ -1,0 +1,4 @@
+dependencies {
+    implementation project(':guard-api')
+    implementation 'org.fusesource.jansi:jansi:2.4.0'
+}

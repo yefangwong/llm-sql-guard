@@ -1,0 +1,2 @@
+rootProject.name = 'llm-sql-guard'
+include 'guard-core', 'guard-cli', 'guard-dialect', 'guard-api', 'guard-executor', 'guard-ui'

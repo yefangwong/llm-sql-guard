@@ -1,0 +1,68 @@
+# llm-sql-guard 組織架構規格 (Architecture Blueprint)
+# 版本: 1.0.0
+# 最後更新: 2026-02-27
+
+[organization_policy]
+allowed_languages = ["Java 8+", "Java"]
+primary_frameworks = ["Spring Boot 2+", "Gradle 8.x"]
+deployment_target = "Standalone / Kubernetes"
+
+[architecture_layers]
+# 定義標準的分層模型，讓所有子模組各司其職
+[[architecture.layers]]
+name = "Entry Point (Interaction)"
+modules = ["guard-cli", "guard-service"]
+description = "提供互動式 TUI (REPL) 與 REST API 診斷接口。"
+
+[[architecture.layers]]
+name = "Intelligence (AI Diagnosis)"
+modules = ["guard-ai-client"]
+description = "動態 AI 通訊模組，提供 SQL 失敗的語義級解釋。"
+
+[[architecture.layers]]
+name = "Core Engine (Validation)"
+modules = ["guard-core", "guard-dialect"]
+description = "核心 SQL 語義校驗引擎與 4-Tier Metadata 模型。"
+
+[[architecture.layers]]
+name = "Execution & Presentation"
+modules = ["guard-executor", "guard-ui"]
+description = "安全 JDBC 唯讀執行器與 ANSI 表格渲染引擎。"
+
+[[architecture.layers]]
+name = "Extension Framework"
+modules = ["guard-api"]
+description = "定義 Agent SKILL 與客製化指令契約。"
+
+[document_workflow]
+# 將工程文件流程正式納入開發規範
+documentation_strategy = "Diagram as Code (PlantUML)"
+diagram_folder = "docs/"
+image_output_folder = "docs/images/"
+adr_folder = "docs/adr/"
+
+[document_workflow.automation]
+generate_diagram = "./gradlew generateDiagram"
+view_docs = "./gradlew viewDocs"
+view_diagrams = "./gradlew viewDiagrams"
+description = "自動化掃描 docs/*.puml 並產出 PNG，並提供快速開啟文件與圖片的捷徑。"
+
+[compliance_check]
+# 效能與安全性預算
+require_unit_tests = true
+performance_budget_ms = 200
+security_scan_enabled = true
+
+[gemini_integration]
+# 注入給 Gemini CLI 的環境變數與提示
+context_injection = '''
+在進行後續開發時，必須遵循以下規則：
+1. 任何重大設計變更必須先在 docs/adr/ 記錄決策。
+2. 任何新的核心流程必須同步更新 docs/ 下的 .puml 檔案。
+3. 程式碼提交前，建議執行 ./gradlew generateDiagram 以同步設計圖。
+
+--- 開發者常用指令 (Developer Quick Commands) ---
+- [同步圖表] : ./gradlew generateDiagram
+- [查看文件] : ./gradlew viewDocs
+- [查看圖表] : ./gradlew viewDiagrams
+'''

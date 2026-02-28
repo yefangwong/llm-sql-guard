@@ -1,0 +1,92 @@
+@startuml
+!theme toy
+skinparam componentStyle uml2
+
+title llm-sql-guard - 系統架構類別圖 (Architecture Class Diagram)
+
+' --- Layers Definition ---
+
+package "Entry Point (Interaction)" #E1F5FE {
+    class SqlGuardApp {
+        +main(args: String[])
+    }
+    class InteractiveShell {
+        -validator: SqlValidator
+        -executor: SqlExecutor
+        +start(): void
+        +processCommand(cmd: String): void
+    }
+}
+
+package "Core Engine (Validation)" #FFF9C4 {
+    class SqlValidator {
+        +validate(sql: String): ValidationResult
+    }
+    class SqlValidationVisitor {
+        -context: ValidationContext
+        +visitAlias(): void
+    }
+    
+    package "4-Tier Metadata" {
+        class DatabaseMetadata
+        class SchemaMetadata
+        class TableMetadata
+        class ColumnMetadata
+    }
+    
+    interface SqlDialect {
+        +getKeywords(): List<String>
+    }
+    class SqliteDialect implements SqlDialect
+}
+
+package "Intelligence (AI Diagnosis)" #E8F5E9 {
+    class PromptGenerator {
+        +generateErrorExplanation(result: ValidationResult): String
+    }
+    note bottom: 此處為 guard-ai-client 預留接口
+}
+
+package "Execution & Presentation" #F3E5F5 {
+    interface SqlExecutor {
+        +execute(sql: String): DataTable
+    }
+    class JdbcSqlExecutor implements SqlExecutor {
+        -isReadOnly: boolean
+    }
+    class TableRenderer {
+        +render(table: DataTable): void
+    }
+    class DataTable
+}
+
+package "Extension Framework" #E0E0E0 {
+    interface Skill {
+        +onEnable(ctx: GuardContext): void
+    }
+    interface CustomCommand {
+        +execute(): void
+    }
+    class GuardContext
+}
+
+' --- Relationships ---
+
+SqlGuardApp --> InteractiveShell
+InteractiveShell ..> SqlValidator : 使用校驗
+InteractiveShell ..> SqlExecutor : 使用執行
+InteractiveShell ..> TableRenderer : 使用渲染
+
+SqlValidator --> SqlValidationVisitor
+SqlValidator --> DatabaseMetadata : 使用模型
+SqlValidator --> SqlDialect : 方言支持
+
+SqlValidationVisitor --> PromptGenerator : AI 解析
+
+JdbcSqlExecutor ..> DataTable : 回傳結果
+TableRenderer ..> DataTable : 渲染數據
+
+Skill ..> GuardContext
+CustomCommand ..> GuardContext
+
+@enduml
