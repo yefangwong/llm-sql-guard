@@ -2,6 +2,7 @@ package io.yefangwong.guard.ui;
 
 import io.yefangwong.guard.ui.model.DataTable;
 import io.yefangwong.guard.ui.render.TableRenderer;
+import java.io.PrintWriter;
 import java.util.Arrays;
 
 public class UiTest {
@@ -19,6 +20,6 @@ public class UiTest {
         table.addRow(Arrays.asList(105, "charlie_long_name", "ACTIVE", "2026-02-27 10:15"));
 
         TableRenderer renderer = new TableRenderer();
-        renderer.render(table);
+        renderer.render(table, new PrintWriter(System.out, true));
     }
 }

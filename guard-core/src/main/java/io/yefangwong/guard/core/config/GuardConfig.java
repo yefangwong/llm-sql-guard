@@ -27,6 +27,10 @@ public class GuardConfig {
         public String metadataPath;
         @JsonProperty("read_only")
         public boolean readOnly;
+
+        public String getUrl() {
+            return "jdbc:sqlite:" + path;
+        }
     }
 
     public static class UiConfig {

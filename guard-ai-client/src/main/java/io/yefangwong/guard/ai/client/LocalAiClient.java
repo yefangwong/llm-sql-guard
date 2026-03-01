@@ -1,6 +1,7 @@
 package io.yefangwong.guard.ai.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.houbb.opencc4j.util.ZhConverterUtil;
 import io.yefangwong.guard.ai.model.AiRequest;
 import io.yefangwong.guard.ai.model.AiResponse;
 import io.yefangwong.guard.core.ai.AiClient;
@@ -11,6 +12,9 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 本地 AI 客戶端：支援 OpenAI 相容協定與自動簡繁轉換。
+ */
 public class LocalAiClient implements AiClient {
     private final OkHttpClient client;
     private final ObjectMapper mapper = new ObjectMapper();
@@ -50,13 +54,22 @@ public class LocalAiClient implements AiClient {
 
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
-                    String responseBody = response.body().string();
-                    if (!response.isSuccessful()) {
-                        future.complete("AI 服務暫時無法回應 (" + response.code() + "): " + responseBody);
-                        return;
+                    try (ResponseBody responseBody = response.body()) {
+                        String bodyString = responseBody.string();
+                        if (!response.isSuccessful()) {
+                            future.complete("AI 服務暫時無法回應 (" + response.code() + "): " + bodyString);
+                            return;
+                        }
+                        
+                        AiResponse aiResp = mapper.readValue(bodyString, AiResponse.class);
+                        String content = aiResp.getContent();
+                        
+                        // 執行簡繁轉換 (S2T)
+                        String traditionalContent = ZhConverterUtil.toTraditional(content);
+                        future.complete(traditionalContent);
+                    } catch (Exception e) {
+                        future.completeExceptionally(e);
                     }
-                    AiResponse aiResp = mapper.readValue(responseBody, AiResponse.class);
-                    future.complete(aiResp.getContent());
                 }
             });
         } catch (Exception e) {
@@ -68,7 +81,6 @@ public class LocalAiClient implements AiClient {
 
     @Override
     public boolean isAvailable() {
-        // 簡單的心跳測試，這裡暫時檢查配置
         return config.enabled && config.endpoint != null;
     }
 }

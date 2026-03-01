@@ -1,89 +1,109 @@
 package io.yefangwong.guard.cli.shell;
 
+import io.yefangwong.guard.ai.client.LocalAiClient;
+import io.yefangwong.guard.core.model.DatabaseMetadata;
+import io.yefangwong.guard.core.model.MetadataLoader;
+import io.yefangwong.guard.core.service.AiDiagnosisService;
 import io.yefangwong.guard.core.validation.SqlValidator;
 import io.yefangwong.guard.core.validation.ValidationResult;
-import org.jline.reader.LineReader;
-import org.jline.reader.LineReaderBuilder;
-import org.jline.reader.EndOfFileException;
-import org.jline.reader.UserInterruptException;
+import io.yefangwong.guard.executor.JdbcSqlExecutor;
+import io.yefangwong.guard.ui.model.DataTable;
+import io.yefangwong.guard.ui.render.TableRenderer;
+import org.jline.reader.*;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+import org.fusesource.jansi.Ansi;
+import java.io.PrintWriter;
+import static org.fusesource.jansi.Ansi.ansi;
 
-import java.io.IOException;
-
-/**
- * 現代化交互式 Shell (REPL)
- */
 public class InteractiveShell {
     private final SqlValidator validator;
-    private final String prompt = "\u001B[36msql-guard » \u001B[0m";
+    private final AiDiagnosisService diagnosisService;
+    private final JdbcSqlExecutor executor;
+    private final TableRenderer renderer = new TableRenderer();
 
-    public InteractiveShell(SqlValidator validator) {
-        this.validator = validator;
+    public InteractiveShell() throws Exception {
+        DatabaseMetadata metadata = MetadataLoader.load();
+        this.validator = new SqlValidator(metadata);
+        this.diagnosisService = new AiDiagnosisService(new LocalAiClient());
+        this.executor = new JdbcSqlExecutor(); 
     }
 
-    public void start() {
-        try (Terminal terminal = TerminalBuilder.builder().system(true).build()) {
-            LineReader reader = LineReaderBuilder.builder()
-                    .terminal(terminal)
-                    .appName("llm-sql-guard")
-                    .build();
+    public void start() throws Exception {
+        Terminal terminal = TerminalBuilder.builder().system(true).build();
+        LineReader reader = LineReaderBuilder.builder()
+                .terminal(terminal)
+                .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%P > ")
+                .build();
 
-            System.out.println("\u001B[32m[🛡️] Interactive Mode Started. Type /exit to quit.\u001B[0m");
+        printWelcome(terminal);
 
-            while (true) {
-                String line;
-                try {
-                    line = reader.readLine(prompt);
-                } catch (UserInterruptException | EndOfFileException e) {
-                    break;
-                }
-
-                if (line == null || line.trim().isEmpty()) {
-                    continue;
-                }
-
-                if (line.equalsIgnoreCase("/exit") || line.equalsIgnoreCase("exit")) {
-                    break;
-                }
-
-                if (line.equalsIgnoreCase("/help")) {
-                    printHelp();
-                    continue;
-                }
-
-                // 執行 SQL 校驗
-                processSql(line);
+        String prompt = "sql-guard> ";
+        while (true) {
+            String line;
+            try {
+                line = reader.readLine(prompt);
+            } catch (UserInterruptException e) {
+                break;
+            } catch (EndOfFileException e) {
+                break;
             }
-        } catch (IOException e) {
-            System.err.println("Error initializing terminal: " + e.getMessage());
+
+            if (line == null || line.trim().equalsIgnoreCase("exit") || line.trim().equalsIgnoreCase("quit")) {
+                break;
+            }
+
+            if (line.trim().isEmpty()) continue;
+
+            processCommand(line, terminal);
         }
+        
+        terminal.writer().println("Goodbye!");
+        terminal.flush();
     }
 
-    private void processSql(String sql) {
-        System.out.println("\u001B[90m[ 🔎 ANALYZING SQL ] ...\u001B[0m");
+    private void processCommand(String sql, Terminal terminal) {
+        PrintWriter writer = terminal.writer();
+        writer.println(ansi().fgCyan().a("Validating SQL...").reset());
+        terminal.flush();
+
         ValidationResult result = validator.validate(sql);
 
-        if (result.isValid()) {
-            System.out.println("\u001B[32m[ ✅ VALIDATED ] SQL is compliant with ERD.\u001B[0m");
-        } else {
-            System.out.println("\u001B[31m[ ❌ VIOLATION DETECTED ]\u001B[0m");
-            for (String error : result.getErrors()) {
-                System.out.println("  ➜ \u001B[31m" + error + "\u001B[0m");
+        if (result.isSuccess()) {
+            writer.println(ansi().fgGreen().a("✓ Validation Passed. Executing safely...").reset());
+            terminal.flush();
+            try {
+                DataTable table = executor.executeQuery(sql);
+                renderer.render(table, writer);
+            } catch (Exception e) {
+                writer.println(ansi().fgRed().a("Execution Error: " + e.getMessage()).reset());
             }
-            if (!result.getSuggestions().isEmpty()) {
-                System.out.println("\n\u001B[33m[ 🤔 DID YOU MEAN? ]\u001B[0m");
-                for (String suggestion : result.getSuggestions()) {
-                    System.out.println("  ➜ " + suggestion);
-                }
+        } else {
+            writer.println(ansi().fgRed().a("✗ Validation Failed:").reset());
+            for (String error : result.getErrors()) {
+                writer.println(ansi().fgRed().a("  - " + error).reset());
+            }
+
+            writer.println(ansi().fgYellow().a("🤖 Requesting AI Diagnosis...").reset());
+            terminal.flush();
+
+            try {
+                String diagnosis = diagnosisService.diagnose(sql, result).get();
+                writer.println(ansi().fgYellow().a("\n--- AI Diagnosis ---").reset());
+                writer.println(diagnosis);
+                writer.println(ansi().fgYellow().a("--------------------\n").reset());
+            } catch (Exception e) {
+                writer.println(ansi().fgRed().a("AI Diagnosis failed: " + e.getMessage()).reset());
             }
         }
+        terminal.flush();
     }
 
-    private void printHelp() {
-        System.out.println("\nCommands:");
-        System.out.println("  /exit - Exit the shell");
-        System.out.println("  /help - Show this help message");
-        System.out.println("  [SQL] - Enter any SQL to validate against Metadata\n");
+    private void printWelcome(Terminal terminal) {
+        terminal.writer().println(ansi().eraseScreen());
+        terminal.writer().println(ansi().fgBlue().bold().a("🛡️ llm-sql-guard Interactive Shell v1.0.0-alpha").reset());
+        terminal.writer().println("Type 'exit' to quit. Multiline SQL is supported.");
+        terminal.writer().println();
+        terminal.flush();
     }
 }

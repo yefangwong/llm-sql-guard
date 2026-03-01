@@ -9,6 +9,7 @@ dependencies {
     implementation project(':guard-core')
     implementation project(':guard-executor')
     implementation project(':guard-ui')
+    implementation project(':guard-ai-client')
     
     // CLI framework
     implementation 'info.picocli:picocli:4.7.1'

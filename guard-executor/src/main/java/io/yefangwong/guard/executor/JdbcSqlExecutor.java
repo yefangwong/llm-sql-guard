@@ -1,5 +1,7 @@
 package io.yefangwong.guard.executor;
 
+import io.yefangwong.guard.core.config.ConfigLoader;
+import io.yefangwong.guard.core.config.GuardConfig;
 import io.yefangwong.guard.ui.model.DataTable;
 import java.sql.*;
 import java.util.ArrayList;
@@ -12,6 +14,13 @@ public class JdbcSqlExecutor implements SqlExecutor {
     private final String url;
     private final String user;
     private final String password;
+
+    public JdbcSqlExecutor() {
+        GuardConfig.DatabaseConfig config = ConfigLoader.get().database;
+        this.url = config.getUrl();
+        this.user = null;
+        this.password = null;
+    }
 
     public JdbcSqlExecutor(String url, String user, String password) {
         this.url = url;
