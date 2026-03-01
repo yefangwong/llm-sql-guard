@@ -33,6 +33,17 @@ package "Core Engine (Validation)" #FFF9C4 {
         class TableMetadata
         class ColumnMetadata
     }
+
+    package "Configuration System" #BBDEFB {
+        class GuardConfig {
+            +ai: AiConfig
+            +database: DatabaseConfig
+        }
+        class ConfigLoader {
+            +load(): GuardConfig
+            +get(): GuardConfig
+        }
+    }
     
     interface SqlDialect {
         +getKeywords(): List<String>

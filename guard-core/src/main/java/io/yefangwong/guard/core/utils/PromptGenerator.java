@@ -3,6 +3,7 @@ package io.yefangwong.guard.core.utils;
 import io.yefangwong.guard.core.model.DatabaseMetadata;
 import io.yefangwong.guard.core.model.SchemaMetadata;
 import io.yefangwong.guard.core.model.TableMetadata;
+import io.yefangwong.guard.core.model.ColumnMetadata;
 
 import java.util.Map;
 
@@ -16,25 +17,18 @@ public class PromptGenerator {
      */
     public String generateMarkdownPrompt(DatabaseMetadata metadata) {
         StringBuilder sb = new StringBuilder();
-        sb.append("# Database ERD: ").append(metadata.getName()).append("
-
-");
+        sb.append("# Database ERD: ").append(metadata.getName()).append("\n\n");
 
         for (SchemaMetadata schema : metadata.getSchemas().values()) {
-            sb.append("## Schema: ").append(schema.getName()).append("
-");
+            sb.append("## Schema: ").append(schema.getName()).append("\n");
             for (TableMetadata table : schema.getTables().values()) {
-                sb.append("### Table: ").append(table.getName()).append("
-");
-                sb.append("| Column | Type |
-| --- | --- |
-");
-                for (Map.Entry<String, io.yefangwong.guard.core.model.ColumnMetadata> col : table.getColumns().entrySet()) {
-                    sb.append("| ").append(col.getKey()).append(" | ").append(col.getValue().getType()).append(" |
-");
+                sb.append("### Table: ").append(table.getName()).append("\n");
+                sb.append("| Column | Type |\n| --- | --- |\n");
+                for (Map.Entry<String, ColumnMetadata> col : table.getColumns().entrySet()) {
+                    sb.append("| ").append(col.getKey()).append(" | ")
+                      .append(col.getValue().getType()).append(" |\n");
                 }
-                sb.append("
-");
+                sb.append("\n");
             }
         }
         return sb.toString();

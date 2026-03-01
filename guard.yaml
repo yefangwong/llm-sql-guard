@@ -1,0 +1,23 @@
+# llm-sql-guard 核心配置
+# 此文件用於定義本地 AI 與資料庫的連線規格
+
+server:
+  port: 8080
+
+ai:
+  # 本地 LLM (如 LM Studio / Ollama / 自建 API)
+  endpoint: "http://192.168.137.1:1234/v1/chat/completions"
+  model: "qwen-2.5-coder-7b-instruct"
+  timeout_ms: 10000
+  enabled: true
+
+database:
+  # 預設 SQLite 資料庫
+  path: "test-db.sqlite"
+  metadata_path: "test-metadata.json"
+  read_only: true
+
+ui:
+  theme: "ansi-dark"
+  table_limit: 50
+  show_execution_time: true
