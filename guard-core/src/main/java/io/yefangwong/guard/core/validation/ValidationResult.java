@@ -23,6 +23,7 @@ public class ValidationResult {
     }
 
     public boolean isValid() { return valid; }
+    public boolean isSuccess() { return valid; }
     public List<String> getErrors() { return errors; }
     public List<String> getSuggestions() { return suggestions; }
 }
