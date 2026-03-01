@@ -2,7 +2,7 @@
 !theme toy
 skinparam componentStyle uml2
 
-title llm-sql-guard - 系統架構類別圖 (Architecture Class Diagram)
+title llm-sql-guard - 系統架構類別圖 (v1.0.0-beta)
 
 ' --- Layers Definition ---
 
@@ -12,92 +12,70 @@ package "Entry Point (Interaction)" #E1F5FE {
     }
     class InteractiveShell {
         -validator: SqlValidator
+        -diagnosisService: AiDiagnosisService
         -executor: SqlExecutor
+        -renderer: TableRenderer
         +start(): void
-        +processCommand(cmd: String): void
     }
 }
 
-package "Core Engine (Validation)" #FFF9C4 {
+package "Core Engine (Validation & Service)" #FFF9C4 {
     class SqlValidator {
         +validate(sql: String): ValidationResult
     }
-    class SqlValidationVisitor {
-        -context: ValidationContext
-        +visitAlias(): void
+    class AiDiagnosisService {
+        -aiClient: AiClient
+        +diagnose(sql, result): CompletableFuture
     }
     
     package "4-Tier Metadata" {
         class DatabaseMetadata
-        class SchemaMetadata
-        class TableMetadata
-        class ColumnMetadata
-    }
-
-    package "Configuration System" #BBDEFB {
-        class GuardConfig {
-            +ai: AiConfig
-            +database: DatabaseConfig
-        }
-        class ConfigLoader {
-            +load(): GuardConfig
-            +get(): GuardConfig
+        class MetadataLoader {
+            +load(): DatabaseMetadata
         }
     }
-    
-    interface SqlDialect {
-        +getKeywords(): List<String>
-    }
-    class SqliteDialect implements SqlDialect
 }
 
 package "Intelligence (AI Diagnosis)" #E8F5E9 {
-    class PromptGenerator {
-        +generateErrorExplanation(result: ValidationResult): String
+    interface AiClient {
+        +ask(prompt): CompletableFuture
     }
-    note bottom: 此處為 guard-ai-client 預留接口
+    class LocalAiClient implements AiClient {
+        -zhConverter: OpenCC
+        +ask(prompt): CompletableFuture
+    }
+    note bottom: 支援 OpenAI 協定與自動簡繁轉換
 }
 
 package "Execution & Presentation" #F3E5F5 {
     interface SqlExecutor {
-        +execute(sql: String): DataTable
+        +executeQuery(sql: String): DataTable
     }
     class JdbcSqlExecutor implements SqlExecutor {
-        -isReadOnly: boolean
+        -url: String
     }
     class TableRenderer {
-        +render(table: DataTable): void
+        +render(table, writer): void
     }
     class DataTable
 }
 
-package "Extension Framework" #E0E0E0 {
-    interface Skill {
-        +onEnable(ctx: GuardContext): void
+package "Configuration System" #BBDEFB {
+    class GuardConfig
+    class ConfigLoader {
+        +get(): GuardConfig
     }
-    interface CustomCommand {
-        +execute(): void
-    }
-    class GuardContext
 }
 
 ' --- Relationships ---
 
 SqlGuardApp --> InteractiveShell
-InteractiveShell ..> SqlValidator : 使用校驗
-InteractiveShell ..> SqlExecutor : 使用執行
-InteractiveShell ..> TableRenderer : 使用渲染
+InteractiveShell ..> SqlValidator
+InteractiveShell ..> AiDiagnosisService
+InteractiveShell ..> JdbcSqlExecutor
+InteractiveShell ..> TableRenderer
 
-SqlValidator --> SqlValidationVisitor
-SqlValidator --> DatabaseMetadata : 使用模型
-SqlValidator --> SqlDialect : 方言支持
-
-SqlValidationVisitor --> PromptGenerator : AI 解析
-
-JdbcSqlExecutor ..> DataTable : 回傳結果
-TableRenderer ..> DataTable : 渲染數據
-
-Skill ..> GuardContext
-CustomCommand ..> GuardContext
+AiDiagnosisService --> AiClient
+AiDiagnosisService ..> MetadataLoader
 
 @enduml
